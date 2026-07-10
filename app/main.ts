@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import fs from "node:fs/promises";
+import { execSync } from "node:child_process";
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
@@ -66,6 +67,23 @@ async function main() {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "Bash",
+        description: "Execute a shell command",
+        parameters: {
+          type: "object",
+          required: ["command"],
+          properties: {
+            command: {
+              type: "string",
+              description: "The command to execute",
+            },
+          },
+        },
+      },
+    },
   ];
 
   // let loopCount = 0;
@@ -98,12 +116,12 @@ async function main() {
         if (toolCall.type === "function" && toolCall.function.name === "Read") {
           const args = JSON.parse(toolCall.function.arguments);
           const filePath = args.file_path;
-          const data = await fs.readFile(filePath, "utf-8");
-          // Add toll call result to messages
+          const result = await fs.readFile(filePath, "utf-8");
+          // Add tool call result to messages
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: data,
+            content: result,
           });
         }
         if (
@@ -114,11 +132,22 @@ async function main() {
           const filePath = args.file_path;
           const content = args.content;
           await fs.writeFile(filePath, content);
-          // Add toll call result to messages
+          // Add tool call result to messages
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
             content: content,
+          });
+        }
+        if (toolCall.type === "function" && toolCall.function.name === "Bash") {
+          const args = JSON.parse(toolCall.function.arguments);
+          const command = args.command;
+          const result = await execSync(command);
+          // Add tool call result to messages
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: result.toString("utf-8"),
           });
         }
       }
