@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import fs from "node:fs/promises";
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -48,9 +49,22 @@ async function main() {
 
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   console.error("Logs from your program will appear here!");
+  const choiceMessage = response.choices[0].message;
 
-  // TODO: Uncomment the lines below to pass the first stage
-  console.log(response.choices[0].message.content);
+  if (choiceMessage.tool_calls) {
+    if (
+      choiceMessage.tool_calls[0].type == "function" &&
+      choiceMessage.tool_calls[0].function.name == "Read"
+    ) {
+      const filePath = JSON.parse(
+        choiceMessage.tool_calls[0].function.arguments,
+      ).file_path;
+      const data = await fs.readFile(filePath, "utf-8");
+      console.log(data);
+    }
+  } else {
+    console.log(choiceMessage.content);
+  }
 }
 
 main();
