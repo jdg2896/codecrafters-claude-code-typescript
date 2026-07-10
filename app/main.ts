@@ -45,6 +45,27 @@ async function main() {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "Write",
+        description: "Write content to a file",
+        parameters: {
+          type: "object",
+          required: ["file_path", "content"],
+          properties: {
+            file_path: {
+              type: "string",
+              description: "The path of the file to write to",
+            },
+            content: {
+              type: "string",
+              description: "The content to write to the file",
+            },
+          },
+        },
+      },
+    },
   ];
 
   // let loopCount = 0;
@@ -75,13 +96,29 @@ async function main() {
     } else {
       for (const toolCall of toolCalls) {
         if (toolCall.type === "function" && toolCall.function.name === "Read") {
-          const filePath = JSON.parse(toolCall.function.arguments).file_path;
+          const args = JSON.parse(toolCall.function.arguments);
+          const filePath = args.file_path;
           const data = await fs.readFile(filePath, "utf-8");
           // Add toll call result to messages
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
             content: data,
+          });
+        }
+        if (
+          toolCall.type === "function" &&
+          toolCall.function.name === "Write"
+        ) {
+          const args = JSON.parse(toolCall.function.arguments);
+          const filePath = args.file_path;
+          const content = args.content;
+          await fs.writeFile(filePath, content);
+          // Add toll call result to messages
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: content,
           });
         }
       }
